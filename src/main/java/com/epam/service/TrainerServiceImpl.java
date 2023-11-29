@@ -4,6 +4,7 @@ import com.epam.error.AccessException;
 import com.epam.error.ErrorMessageConstants;
 import com.epam.error.NotFoundException;
 import com.epam.mapper.TrainerMapper;
+import com.epam.mapper.UserMapper;
 import com.epam.model.Trainer;
 import com.epam.model.TrainingType;
 import com.epam.model.User;
@@ -14,6 +15,7 @@ import com.epam.model.dto.TrainerProfileDtoInput;
 import com.epam.model.dto.TrainerSaveDtoOutput;
 import com.epam.model.dto.TrainerUpdateDtoOutput;
 import com.epam.model.dto.UserDtoInput;
+import com.epam.model.dto.UserWithPassword;
 import com.epam.repo.TrainerRepo;
 import com.epam.repo.TrainingTypeRepo;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -38,12 +40,12 @@ public class TrainerServiceImpl implements TrainerService {
     private final AuthenticationService authenticationService;
 
     private final UserService userService;
-
     private AtomicInteger freeActiveTrainers;
+    private UserMapper userMapper;
 
     public TrainerServiceImpl(TrainerRepo trainerRepo, TrainerMapper trainerMapper, TrainingTypeRepo trainingTypeRepo,
                               AuthenticationService authenticationService, UserService userService,
-                              MeterRegistry meterRegistry) {
+                              MeterRegistry meterRegistry, UserMapper userMapper) {
         this.trainerRepo = trainerRepo;
         this.trainerMapper = trainerMapper;
         this.trainingTypeRepo = trainingTypeRepo;
@@ -51,6 +53,7 @@ public class TrainerServiceImpl implements TrainerService {
         this.userService = userService;
         freeActiveTrainers = new AtomicInteger();
         this.freeActiveTrainers = meterRegistry.gauge("free-active-trainers", freeActiveTrainers);
+        this.userMapper = userMapper;
     }
 
 
@@ -59,8 +62,8 @@ public class TrainerServiceImpl implements TrainerService {
     public TrainerSaveDtoOutput save(TrainerDtoInput trainerDtoInput) {
         log.info("save, trainerDtoInput = {}", trainerDtoInput);
 
-        User user = userService.save(new UserDtoInput(trainerDtoInput.getFirstName(), trainerDtoInput.getLastName()));
-
+        UserWithPassword userWithPassword = userService.save(new UserDtoInput(trainerDtoInput.getFirstName(), trainerDtoInput.getLastName()));
+        User user = userMapper.toEntity(userWithPassword);
         TrainingType trainingType = trainingTypeRepo.findById(trainerDtoInput.getSpecialization())
                                                     .orElseThrow(() -> new AccessException(
                                                             ErrorMessageConstants.ACCESS_ERROR_MESSAGE));
@@ -71,7 +74,7 @@ public class TrainerServiceImpl implements TrainerService {
 
         Trainer trainer = trainerRepo.save(trainerToSave);
 
-        return trainerMapper.toSaveDto(trainer);
+        return trainerMapper.toSaveDto(trainer, userWithPassword.getRawPassword());
     }
 
     @Override

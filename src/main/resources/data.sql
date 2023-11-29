@@ -1,6 +1,6 @@
 INSERT INTO users (first_name, last_name, username, password, is_active, postfix)
 VALUES
-    ('John', 'Doe', 'john.doe', 'password1', true, 0),
+    ('John', 'Doe', 'john.doe', '$2a$12$0lD90b4XcLulRNdvcCteWe1eFO0RrogBN7xxt8CMruBZq7w/.c7sa', true, 0),
     ('Jane', 'Smith', 'jane.smith', 'password2', true, 0),
     ('Alice', 'Johnson', 'alice.johnson', 'password3', true, 0),
     ('Bob', 'Brown', 'bob.brown', 'password4', true, 0),

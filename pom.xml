@@ -20,6 +20,7 @@
     <java.version>17</java.version>
     <org.mapstruct.version>1.5.5.Final</org.mapstruct.version>
     <sonar.coverage.exclusions>**/com/epam/spec/**</sonar.coverage.exclusions>
+    <jjwt.version>0.9.1</jjwt.version>
   </properties>
 
   <dependencies>
@@ -36,6 +37,11 @@
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-data-jpa</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-security</artifactId>
     </dependency>
 
     <dependency>
@@ -84,6 +90,17 @@
       <groupId>io.springfox</groupId>
       <artifactId>springfox-swagger-ui</artifactId>
       <version>2.9.2</version>
+    </dependency>
+
+    <dependency>
+      <groupId>io.jsonwebtoken</groupId>
+      <artifactId>jjwt</artifactId>
+      <version>${jjwt.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.thymeleaf</groupId>
+      <artifactId>thymeleaf</artifactId>
     </dependency>
   </dependencies>
 

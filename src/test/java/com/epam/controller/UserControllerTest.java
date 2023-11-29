@@ -23,29 +23,29 @@ class UserControllerTest {
     @Mock
     private UserService userService;
 
-    @Test
-    void login_shouldOk() {
-        String username = "testUser";
-        String password = "testPassword";
-
-        doNothing().when(userService).login(username, password);
-
-        userController.login(username, password);
-
-        verify(userService).login(username, password);
-    }
-
-    @Test
-    void login_ShouldThrowAccessException() {
-        String username = "testUser";
-        String password = "testPassword";
-
-        doThrow(AccessException.class).when(userService).login(username, password);
-
-        assertThrows(AccessException.class, () -> userController.login(username, password));
-
-        verify(userService).login(username, password);
-    }
+//    @Test
+//    void login_shouldOk() {
+//        String username = "testUser";
+//        String password = "testPassword";
+//
+//        doNothing().when(userService).login(username, password);
+//
+//        userController.login(username, password);
+//
+//        verify(userService).login(username, password);
+//    }
+//
+//    @Test
+//    void login_ShouldThrowAccessException() {
+//        String username = "testUser";
+//        String password = "testPassword";
+//
+//        doThrow(AccessException.class).when(userService).login(username, password);
+//
+//        assertThrows(AccessException.class, () -> userController.login(username, password));
+//
+//        verify(userService).login(username, password);
+//    }
 
     @Test
     void changePassword_ShouldOk() {

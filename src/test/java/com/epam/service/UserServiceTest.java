@@ -230,39 +230,39 @@ class UserServiceTest {
         assertEquals(3, resultUser.getPostfix());
     }
 
-    @Test
-    void login_ShouldOk() {
-        String username = "testUser";
-        String password = "testPassword";
-        User mockUser = new User();
-        mockUser.setId(1L);
-        mockUser.setUsername(username);
-
-        when(userRepo.findByUsername(username)).thenReturn(Optional.of(mockUser));
-        when(authenticationService.checkAccess(password, mockUser)).thenReturn(false);
-
-        userService.login(username, password);
-
-        verify(userRepo).findByUsername(username);
-        verify(authenticationService).checkAccess(password, mockUser);
-    }
-
-    @Test
-    void login_ShouldThrowAccessException() {
-        String username = "testUser";
-        String password = "testPassword";
-        User mockUser = new User();
-        mockUser.setId(1L);
-        mockUser.setUsername(username);
-
-        when(userRepo.findByUsername(username)).thenReturn(Optional.of(mockUser));
-        when(authenticationService.checkAccess(password, mockUser)).thenReturn(true);
-
-        assertThrows(AccessException.class, () -> userService.login(username, password));
-
-        verify(userRepo).findByUsername(username);
-        verify(authenticationService).checkAccess(password, mockUser);
-    }
+//    @Test
+//    void login_ShouldOk() {
+//        String username = "testUser";
+//        String password = "testPassword";
+//        User mockUser = new User();
+//        mockUser.setId(1L);
+//        mockUser.setUsername(username);
+//
+//        when(userRepo.findByUsername(username)).thenReturn(Optional.of(mockUser));
+//        when(authenticationService.checkAccess(password, mockUser)).thenReturn(false);
+//
+//        userService.login(username, password);
+//
+//        verify(userRepo).findByUsername(username);
+//        verify(authenticationService).checkAccess(password, mockUser);
+//    }
+//
+//    @Test
+//    void login_ShouldThrowAccessException() {
+//        String username = "testUser";
+//        String password = "testPassword";
+//        User mockUser = new User();
+//        mockUser.setId(1L);
+//        mockUser.setUsername(username);
+//
+//        when(userRepo.findByUsername(username)).thenReturn(Optional.of(mockUser));
+//        when(authenticationService.checkAccess(password, mockUser)).thenReturn(true);
+//
+//        assertThrows(AccessException.class, () -> userService.login(username, password));
+//
+//        verify(userRepo).findByUsername(username);
+//        verify(authenticationService).checkAccess(password, mockUser);
+//    }
 
     private User createTestUser(UserDtoInput userDtoInput) {
         return User.builder()

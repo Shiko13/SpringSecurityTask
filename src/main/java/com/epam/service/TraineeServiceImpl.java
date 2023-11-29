@@ -4,6 +4,7 @@ import com.epam.error.AccessException;
 import com.epam.error.ErrorMessageConstants;
 import com.epam.error.NotFoundException;
 import com.epam.mapper.TraineeMapper;
+import com.epam.mapper.UserMapper;
 import com.epam.model.Trainee;
 import com.epam.model.Trainer;
 import com.epam.model.User;
@@ -15,6 +16,7 @@ import com.epam.model.dto.TraineeUpdateDtoOutput;
 import com.epam.model.dto.TraineeUpdateListDtoOutput;
 import com.epam.model.dto.TrainerShortDtoInput;
 import com.epam.model.dto.UserDtoInput;
+import com.epam.model.dto.UserWithPassword;
 import com.epam.repo.TraineeRepo;
 import com.epam.repo.TrainerRepo;
 import io.micrometer.core.annotation.Counted;
@@ -40,20 +42,23 @@ public class TraineeServiceImpl implements TraineeService {
 
     private final UserService userService;
 
+    private final UserMapper userMapper;
+
     @Override
     @Transactional
     @Counted("trainee_registration")
     public TraineeSaveDtoOutput save(TraineeDtoInput traineeDtoInput) {
         log.info("save, traineeDtoInput = {}", traineeDtoInput);
 
-        User user = userService.save(new UserDtoInput(traineeDtoInput.getFirstName(), traineeDtoInput.getLastName()));
+        UserWithPassword userWithPassword = userService.save(new UserDtoInput(traineeDtoInput.getFirstName(), traineeDtoInput.getLastName()));
+        User user = userMapper.toEntity(userWithPassword);
 
         Trainee traineeToSave = traineeMapper.toEntity(traineeDtoInput);
         traineeToSave.setUser(user);
 
         Trainee trainee = traineeRepo.save(traineeToSave);
 
-        return traineeMapper.toSaveDto(trainee);
+        return traineeMapper.toSaveDto(trainee, userWithPassword.getRawPassword());
     }
 
     @Override
@@ -125,7 +130,7 @@ public class TraineeServiceImpl implements TraineeService {
     }
 
     public void authenticate(String password, User user) {
-        if (authenticationService.checkAccess(password, user)) {
+        if (!authenticationService.checkAccess(password, user)) {
             throw new AccessException(ErrorMessageConstants.ACCESS_ERROR_MESSAGE);
         }
     }

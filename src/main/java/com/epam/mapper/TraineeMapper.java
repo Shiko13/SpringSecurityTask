@@ -16,9 +16,9 @@ import org.mapstruct.MappingTarget;
 @Mapper(componentModel = "spring", uses = {TrainerMapper.class})
 public interface TraineeMapper {
 
-    @Mapping(target = "password", source = "user.password")
+    @Mapping(target = "password", source = "rawPassword")
     @Mapping(target = "username", expression = "java(appendPostfix(trainee.getUser()))")
-    TraineeSaveDtoOutput toSaveDto(Trainee trainee);
+    TraineeSaveDtoOutput toSaveDto(Trainee trainee, String rawPassword);
 
     @Mapping(target = "firstName", source = "user.firstName")
     @Mapping(target = "lastName", source = "user.lastName")
