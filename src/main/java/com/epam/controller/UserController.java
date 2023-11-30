@@ -36,8 +36,8 @@ public class UserController {
     @PatchMapping("/activate")
     @ResponseStatus(HttpStatus.OK)
     @ApiOperation(value = "Switch user activity")
-    public void switchActivate(@RequestParam String username, @RequestParam String password,
+    public void switchActivate(@RequestParam String username,
                                @RequestBody UserActivateDtoInput userInput) {
-        userService.switchActivate(username, password, userInput);
+        userService.switchActivate(username, userInput);
     }
 }

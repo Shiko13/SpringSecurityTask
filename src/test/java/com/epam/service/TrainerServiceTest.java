@@ -2,6 +2,7 @@ package com.epam.service;
 
 import com.epam.error.AccessException;
 import com.epam.mapper.TrainerMapper;
+import com.epam.mapper.UserMapper;
 import com.epam.model.Trainee;
 import com.epam.model.Trainer;
 import com.epam.model.TrainingType;
@@ -15,6 +16,7 @@ import com.epam.model.dto.TrainerSaveDtoOutput;
 import com.epam.model.dto.TrainerUpdateDtoOutput;
 import com.epam.model.dto.TrainingTypeShortOutputDto;
 import com.epam.model.dto.UserDtoInput;
+import com.epam.model.dto.UserWithPassword;
 import com.epam.repo.TrainerRepo;
 import com.epam.repo.TrainingTypeRepo;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -31,7 +33,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -50,19 +51,19 @@ class TrainerServiceTest {
     private TrainerRepo trainerRepo;
     @Mock
     private TrainerMapper trainerMapper;
+    @Mock
+    private UserMapper userMapper;
 
     @Mock
     private TrainingTypeRepo trainingTypeRepo;
 
     @Mock
     private UserService userService;
-
-    @Mock
-    private AuthenticationService authenticationService;
     @Mock
     private MeterRegistry meterRegistry;
 
     private User user;
+    private UserWithPassword userWithPassword;
     private List<Trainee> selectedTrainees;
     private TrainerDtoInput trainerDtoInput;
     private Trainer trainerToSave;
@@ -76,6 +77,7 @@ class TrainerServiceTest {
     void setUp() {
         userDtoInput = createUserDtoInput();
         user = createUser(userDtoInput);
+        userWithPassword = createUserWithPassword(user);
         selectedTrainees = createSelectedTrainees();
         trainerDtoInput = createTrainerDtoInput(user);
         trainerToSave = createTrainerToSave(trainerDtoInput, selectedTrainees, user);
@@ -89,10 +91,10 @@ class TrainerServiceTest {
     void save_shouldReturnSavedTrainerDtoOutput() {
         when(trainerRepo.save(trainerToSave)).thenReturn(trainerToSave);
         when(trainerMapper.toEntity(trainerDtoInput)).thenReturn(trainerToSave);
-        when(trainerMapper.toSaveDto(trainerToSave)).thenReturn(trainerSaveDtoOutput);
+        when(trainerMapper.toSaveDto(trainerToSave, "testPassword")).thenReturn(trainerSaveDtoOutput);
         when(trainingTypeRepo.findById(trainerDtoInput.getSpecialization())).thenReturn(
                 Optional.ofNullable(trainerToSave.getTrainingType()));
-        when(userService.save(userDtoInput)).thenReturn(user);
+        when(userService.save(userDtoInput)).thenReturn(userWithPassword);
 
         TrainerSaveDtoOutput result = trainerService.save(trainerDtoInput);
 
@@ -107,7 +109,7 @@ class TrainerServiceTest {
         when(userService.findUserByUsername(user.getUsername())).thenReturn(Optional.of(user));
         when(trainerRepo.findByUserId(user.getId())).thenReturn(Optional.ofNullable(trainerToSave));
 
-        TrainerDtoOutput result = trainerService.getByUsername(user.getUsername(), user.getPassword());
+        TrainerDtoOutput result = trainerService.getByUsername(user.getUsername());
 
         assertNotNull(result);
         assertEquals(savedTrainer.getSpecialization(), result.getSpecialization());
@@ -125,8 +127,7 @@ class TrainerServiceTest {
         when(userService.findUserByUsername(user.getUsername())).thenReturn(Optional.of(user));
         when(trainerMapper.toTrainerUpdateDtoOutput(updatedSavedTrainer)).thenReturn(trainerUpdateDtoOutput);
 
-        TrainerUpdateDtoOutput result =
-                trainerService.updateProfile(user.getUsername(), user.getPassword(), trainerProfileDtoInput);
+        TrainerUpdateDtoOutput result = trainerService.updateProfile(user.getUsername(), trainerProfileDtoInput);
 
         assertNotNull(result);
         assertEquals(user.getLastName(), result.getLastName());
@@ -146,8 +147,7 @@ class TrainerServiceTest {
         when(trainerMapper.toTrainerUpdateDtoOutput(updatedSavedTrainer)).thenReturn(trainerUpdateDtoOutput);
 
 
-        TrainerUpdateDtoOutput result =
-                trainerService.updateProfile(user.getUsername(), user.getPassword(), trainerProfileDtoInput);
+        TrainerUpdateDtoOutput result = trainerService.updateProfile(user.getUsername(), trainerProfileDtoInput);
 
         assertNotNull(result);
         assertEquals(user.getLastName(), result.getLastName());
@@ -156,14 +156,13 @@ class TrainerServiceTest {
     @Test
     void updateProfile_WithValidInput_ShouldThrowAccessException() {
         String username = user.getUsername();
-        String password = user.getPassword();
         trainerProfileDtoInput.setSpecialization(99L);
 
         when(trainerRepo.findByUserId(user.getId())).thenReturn(Optional.of(trainerToSave));
         when(userService.findUserByUsername(username)).thenReturn(Optional.of(user));
 
         AccessException exception = assertThrows(AccessException.class,
-                () -> trainerService.updateProfile(username, password, trainerProfileDtoInput),
+                () -> trainerService.updateProfile(username, trainerProfileDtoInput),
                 "An AccessException should be thrown when the user does not exist");
 
         assertEquals("You don't have access for this.", exception.getMessage());
@@ -172,12 +171,10 @@ class TrainerServiceTest {
     @Test
     void getTrainersWithEmptyTrainees_ShouldReturnEmptyList() {
         String username = user.getUsername();
-        String password = user.getPassword();
 
         when(trainerRepo.findByTraineesIsEmptyAndUserIsActiveTrue()).thenReturn(new ArrayList<>());
-        when(userService.findUserByUsername(username)).thenReturn(Optional.of(user));
 
-        List<TrainerForTraineeDtoOutput> result = trainerService.getTrainersWithEmptyTrainees(username, password);
+        List<TrainerForTraineeDtoOutput> result = trainerService.getTrainersWithEmptyTrainees();
 
         assertNotNull(result);
         assertTrue(result.isEmpty());
@@ -186,80 +183,16 @@ class TrainerServiceTest {
     @Test
     void getTrainersWithEmptyTrainees_ShouldReturnTrainersWithUserDetails() {
         String username = user.getUsername();
-        String password = user.getPassword();
         List<Trainer> trainers = createTestTrainers();
 
         when(trainerRepo.findByTraineesIsEmptyAndUserIsActiveTrue()).thenReturn(trainers);
-        when(userService.findUserByUsername(username)).thenReturn(Optional.ofNullable(user));
 
-        List<TrainerForTraineeDtoOutput> result = trainerService.getTrainersWithEmptyTrainees(username, password);
+        List<TrainerForTraineeDtoOutput> result = trainerService.getTrainersWithEmptyTrainees();
 
         assertNotNull(result);
         assertEquals(2, result.size());
 
         verify(trainerRepo).findByTraineesIsEmptyAndUserIsActiveTrue();
-    }
-
-    @Test
-    void authenticate_ValidPasswordAndMatchingIds_NoExceptionThrown() {
-        when(authenticationService.checkAccess(user.getPassword(), user)).thenReturn(false);
-
-        assertDoesNotThrow(() -> trainerService.authenticate(user.getPassword(), user),
-                "Exception should not be thrown for valid credentials and matching IDs");
-
-        verify(authenticationService).checkAccess(user.getPassword(), user);
-    }
-
-    @Test
-    void authenticate_InvalidPassword_AccessExceptionThrown() {
-        when(authenticationService.checkAccess("Invalid password", user)).thenReturn(true);
-
-        AccessException exception =
-                assertThrows(AccessException.class, () -> trainerService.authenticate("Invalid password", user),
-                        "An AccessException should be thrown for invalid password");
-
-        verify(authenticationService).checkAccess("Invalid password", user);
-
-        assertEquals("You don't have access for this.", exception.getMessage());
-    }
-
-    @Test
-    void authenticate_MismatchedIds_AccessExceptionThrown() {
-        String password = user.getPassword();
-        user.setId(user.getId() + 1);
-
-        when(authenticationService.checkAccess(password, user)).thenReturn(true);
-
-        AccessException exception =
-                assertThrows(AccessException.class, () -> trainerService.authenticate(password, user),
-                        "An AccessException should be thrown for mismatched IDs");
-
-        verify(authenticationService).checkAccess(user.getPassword(), user);
-
-        assertEquals("You don't have access for this.", exception.getMessage());
-    }
-
-    @Test
-    void authenticate_ValidPassword_NoExceptionThrown() {
-        when(authenticationService.checkAccess(user.getPassword(), user)).thenReturn(false);
-
-        assertDoesNotThrow(() -> trainerService.authenticate(user.getPassword(), user),
-                "No exception should be thrown for a valid password");
-
-        verify(authenticationService).checkAccess(user.getPassword(), user);
-    }
-
-    @Test
-    void authenticateWithTwoArguments_InvalidPassword_AccessExceptionThrown() {
-        when(authenticationService.checkAccess("Invalid password", user)).thenReturn(true);
-
-        AccessException exception =
-                assertThrows(AccessException.class, () -> trainerService.authenticate("Invalid password", user),
-                        "An AccessException should be thrown for an invalid password");
-
-        verify(authenticationService).checkAccess("Invalid password", user);
-
-        assertEquals("You don't have access for this.", exception.getMessage());
     }
 
     public TrainerDtoInput createTrainerDtoInput(User user) {
@@ -288,6 +221,19 @@ class TrainerServiceTest {
                    .isActive(true)
                    .postfix(0)
                    .build();
+    }
+
+    public UserWithPassword createUserWithPassword(User user) {
+        return UserWithPassword.builder()
+                               .id(user.getId())
+                               .username(user.getUsername())
+                               .firstName(user.getFirstName())
+                               .lastName(user.getLastName())
+                               .rawPassword(user.getPassword())
+                               .encodedPassword("encodedPassword")
+                               .isActive(user.getIsActive())
+                               .postfix(user.getPostfix())
+                               .build();
     }
 
     public UserDtoInput createUserDtoInput() {

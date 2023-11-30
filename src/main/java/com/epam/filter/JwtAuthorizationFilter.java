@@ -1,8 +1,10 @@
 package com.epam.filter;
 
-import com.epam.util.JwtUtil;
+import com.epam.util.JwtProvider;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Claims;
+import lombok.NonNull;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -19,42 +21,44 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
+@Slf4j
 @Component
 public class JwtAuthorizationFilter extends OncePerRequestFilter {
 
-    private final JwtUtil jwtUtil;
+    private final JwtProvider jwtProvider;
     private final ObjectMapper mapper;
 
-    public JwtAuthorizationFilter(JwtUtil jwtUtil, ObjectMapper mapper) {
-        this.jwtUtil = jwtUtil;
+    public JwtAuthorizationFilter(JwtProvider jwtProvider, ObjectMapper mapper) {
+        this.jwtProvider = jwtProvider;
         this.mapper = mapper;
     }
+
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws
-            ServletException, IOException {
+    protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response,
+                                    @NonNull FilterChain filterChain) throws ServletException, IOException {
         Map<String, Object> errorDetails = new HashMap<>();
 
         try {
-            String accessToken = jwtUtil.resolveToken(request);
-            if (accessToken == null ) {
+            String accessToken = jwtProvider.resolveToken(request);
+            if (accessToken == null) {
                 filterChain.doFilter(request, response);
                 return;
             }
-            System.out.println("token : "+accessToken);
-            Claims claims = jwtUtil.resolveClaims(request);
+            Claims claims = jwtProvider.resolveClaims(request);
 
-            if(claims != null & jwtUtil.validateClaims(claims)){
-                String email = claims.getSubject();
-                System.out.println("email : "+email);
+            if (claims != null & jwtProvider.validateClaims(Objects.requireNonNull(claims))) {
+                String username = claims.getSubject();
                 Authentication authentication =
-                        new UsernamePasswordAuthenticationToken(email,"",new ArrayList<>());
+                        new UsernamePasswordAuthenticationToken(username, "", new ArrayList<>());
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
 
-        }catch (Exception e){
+        } catch (Exception e) {
+            log.error("Error resolve token", e);
             errorDetails.put("message", "Authentication Error");
-            errorDetails.put("details",e.getMessage());
+            errorDetails.put("details", e.getMessage());
             response.setStatus(HttpStatus.FORBIDDEN.value());
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
 

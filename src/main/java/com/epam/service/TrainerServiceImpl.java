@@ -32,24 +32,17 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class TrainerServiceImpl implements TrainerService {
 
     private final TrainerRepo trainerRepo;
-
     private final TrainerMapper trainerMapper;
-
     private final TrainingTypeRepo trainingTypeRepo;
-
-    private final AuthenticationService authenticationService;
-
     private final UserService userService;
     private AtomicInteger freeActiveTrainers;
     private UserMapper userMapper;
 
     public TrainerServiceImpl(TrainerRepo trainerRepo, TrainerMapper trainerMapper, TrainingTypeRepo trainingTypeRepo,
-                              AuthenticationService authenticationService, UserService userService,
-                              MeterRegistry meterRegistry, UserMapper userMapper) {
+                              UserService userService, MeterRegistry meterRegistry, UserMapper userMapper) {
         this.trainerRepo = trainerRepo;
         this.trainerMapper = trainerMapper;
         this.trainingTypeRepo = trainingTypeRepo;
-        this.authenticationService = authenticationService;
         this.userService = userService;
         freeActiveTrainers = new AtomicInteger();
         this.freeActiveTrainers = meterRegistry.gauge("free-active-trainers", freeActiveTrainers);
@@ -62,7 +55,8 @@ public class TrainerServiceImpl implements TrainerService {
     public TrainerSaveDtoOutput save(TrainerDtoInput trainerDtoInput) {
         log.info("save, trainerDtoInput = {}", trainerDtoInput);
 
-        UserWithPassword userWithPassword = userService.save(new UserDtoInput(trainerDtoInput.getFirstName(), trainerDtoInput.getLastName()));
+        UserWithPassword userWithPassword =
+                userService.save(new UserDtoInput(trainerDtoInput.getFirstName(), trainerDtoInput.getLastName()));
         User user = userMapper.toEntity(userWithPassword);
         TrainingType trainingType = trainingTypeRepo.findById(trainerDtoInput.getSpecialization())
                                                     .orElseThrow(() -> new AccessException(
@@ -78,11 +72,11 @@ public class TrainerServiceImpl implements TrainerService {
     }
 
     @Override
-    public TrainerDtoOutput getByUsername(String username, String password) {
+    @Transactional
+    public TrainerDtoOutput getByUsername(String username) {
         log.info("getByUserName, username = {}", username);
 
         User user = getUserByUsername(username);
-        authenticate(password, user);
 
         Trainer trainer = trainerRepo.findByUserId(user.getId())
                                      .orElseThrow(() -> new NotFoundException(ErrorMessageConstants.NOT_FOUND_MESSAGE));
@@ -92,12 +86,10 @@ public class TrainerServiceImpl implements TrainerService {
 
     @Override
     @Transactional
-    public TrainerUpdateDtoOutput updateProfile(String username, String password,
-                                                TrainerProfileDtoInput trainerDtoInput) {
+    public TrainerUpdateDtoOutput updateProfile(String username, TrainerProfileDtoInput trainerDtoInput) {
         log.info("updateProfile, username = {}", username);
 
         User user = getUserByUsername(username);
-        authenticate(password, user);
 
         Trainer trainer = trainerRepo.findByUserId(user.getId())
                                      .orElseThrow(() -> new NotFoundException(ErrorMessageConstants.NOT_FOUND_MESSAGE));
@@ -116,11 +108,8 @@ public class TrainerServiceImpl implements TrainerService {
     }
 
     @Override
-    public List<TrainerForTraineeDtoOutput> getTrainersWithEmptyTrainees(String username, String password) {
+    public List<TrainerForTraineeDtoOutput> getTrainersWithEmptyTrainees() {
         log.info("getTrainersWithEmptyTrainees");
-
-        User user = getUserByUsername(username);
-        authenticate(password, user);
 
         List<Trainer> trainers = trainerRepo.findByTraineesIsEmptyAndUserIsActiveTrue();
 
@@ -138,11 +127,5 @@ public class TrainerServiceImpl implements TrainerService {
     private User getUserByUsername(String username) {
         return userService.findUserByUsername(username)
                           .orElseThrow(() -> new NotFoundException(ErrorMessageConstants.NOT_FOUND_MESSAGE));
-    }
-
-    public void authenticate(String password, User user) {
-        if (authenticationService.checkAccess(password, user)) {
-            throw new AccessException(ErrorMessageConstants.ACCESS_ERROR_MESSAGE);
-        }
     }
 }

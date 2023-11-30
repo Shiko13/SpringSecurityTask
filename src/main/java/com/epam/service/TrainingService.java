@@ -11,7 +11,7 @@ import java.util.List;
 
 public interface TrainingService {
 
-    Training save(String username, String password, TrainingDtoInput trainingDtoInput);
+    Training save(TrainingDtoInput trainingDtoInput);
 
     List<TrainingForTraineeDtoOutput> findByDateRangeAndTraineeUsername(TrainingTraineeSpecification specification);
 

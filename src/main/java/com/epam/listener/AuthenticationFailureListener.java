@@ -1,6 +1,7 @@
 package com.epam.listener;
 
-import com.epam.service.LoginAttemptServiceImpl;
+import com.epam.service.LoginAttemptService;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationListener;
 import org.springframework.security.authentication.event.AuthenticationFailureBadCredentialsEvent;
@@ -14,9 +15,10 @@ public class AuthenticationFailureListener implements ApplicationListener<Authen
 
     private final HttpServletRequest request;
 
-    private final LoginAttemptServiceImpl loginAttemptService;
+    private final LoginAttemptService loginAttemptService;
+
     @Override
-    public void onApplicationEvent(AuthenticationFailureBadCredentialsEvent event) {
+    public void onApplicationEvent(@NonNull AuthenticationFailureBadCredentialsEvent event) {
         final String xfHeader = request.getHeader("X-Forwarded-For");
         if (xfHeader == null || xfHeader.isEmpty() || !xfHeader.contains(request.getRemoteAddr())) {
             loginAttemptService.loginFailed(request.getRemoteAddr());

@@ -34,15 +34,14 @@ public class TrainerController {
     @GetMapping("/username")
     @ApiOperation("Get trainer by username")
     public TrainerDtoOutput getProfile(@RequestParam @Pattern(regexp = "[a-z]+\\.[\\w-]+",
-                                                              message = "Invalid input format") String username, @RequestParam String password) {
-        return trainerService.getByUsername(username, password);
+                                                              message = "Invalid input format") String username) {
+        return trainerService.getByUsername(username);
     }
 
     @GetMapping("/free")
     @ApiOperation("Get not assigned on trainee active trainers")
-    public List<TrainerForTraineeDtoOutput> getTrainersWithEmptyTrainees(@RequestParam String username,
-                                                                         @RequestParam String password) {
-        return trainerService.getTrainersWithEmptyTrainees(username, password);
+    public List<TrainerForTraineeDtoOutput> getTrainersWithEmptyTrainees() {
+        return trainerService.getTrainersWithEmptyTrainees();
     }
 
     @PostMapping()
@@ -53,9 +52,9 @@ public class TrainerController {
 
     @PutMapping("/profile")
     @ApiOperation("Update Trainer Profile")
-    public TrainerUpdateDtoOutput updateProfile(@RequestParam String username, @RequestParam String password,
+    public TrainerUpdateDtoOutput updateProfile(@RequestParam String username,
                                                 @RequestBody TrainerProfileDtoInput trainerDtoInput) {
-        return trainerService.updateProfile(username, password, trainerDtoInput);
+        return trainerService.updateProfile(username, trainerDtoInput);
     }
 }
 

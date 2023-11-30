@@ -13,9 +13,9 @@ public interface TrainerService {
 
     TrainerSaveDtoOutput save(TrainerDtoInput trainerDtoInput);
 
-    TrainerDtoOutput getByUsername(String username, String password);
+    TrainerDtoOutput getByUsername(String username);
 
-    TrainerUpdateDtoOutput updateProfile(String username, String password, TrainerProfileDtoInput trainerDtoInput);
+    TrainerUpdateDtoOutput updateProfile(String username, TrainerProfileDtoInput trainerDtoInput);
 
-    List<TrainerForTraineeDtoOutput> getTrainersWithEmptyTrainees(String username, String password);
+    List<TrainerForTraineeDtoOutput> getTrainersWithEmptyTrainees();
 }

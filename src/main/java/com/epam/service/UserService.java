@@ -13,9 +13,7 @@ public interface UserService {
 
     void changePassword(String username, String oldPassword, String newPassword);
 
-    void switchActivate(String username, String password, UserActivateDtoInput userInput);
+    void switchActivate(String username, UserActivateDtoInput userInput);
 
     Optional<User> findUserByUsername(String username);
-
-//    void login(String username, String password);
 }
