@@ -1,6 +1,7 @@
 package com.epam.service;
 
 import com.epam.error.AccessException;
+import com.epam.error.TooManyAttemptsException;
 import com.epam.model.User;
 import com.epam.model.dto.UserActivateDtoInput;
 import com.epam.model.dto.UserDtoInput;
@@ -12,7 +13,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
 
@@ -22,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -39,6 +45,12 @@ class UserServiceTest {
     private AuthenticationService authenticationService;
 
     @Mock
+    private LoginAttemptServiceImpl loginAttemptService;
+
+    @Mock
+    private PasswordEncoder passwordEncoder;
+
+    @Mock
     private MeterRegistry meterRegistry;
 
     private UserDtoInput userDtoInput;
@@ -53,35 +65,33 @@ class UserServiceTest {
         userWithPassword = createTestUserWithPassword(savedUser);
     }
 
-//    @Test
-//    void save_shouldCreateAndReturnUserDtoOutput() {
-//        when(userRepo.save(any(User.class))).thenReturn(savedUser);
-//
-//        UserWithPassword result = userService.save(userDtoInput);
-//
-//        assertNotNull(result);
-//        assertEquals(userDtoInput.getFirstName(), result.getFirstName());
-//        assertEquals(userDtoInput.getLastName(), result.getLastName());
-//        assertEquals(savedUser.getUsername(), result.getUsername());
-//    }
+    @Test
+    void save_shouldCreateAndReturnUserDtoOutput() {
+        UserWithPassword result = userService.save(userDtoInput);
 
-//    @Test
-//    void createEntireUser_shouldGenerateUniqueUsername() {
-//        UserWithPassword user = userService.createEntireUser(userDtoInput);
-//
-//        assertNotNull(user);
-//        assertTrue(user.getUsername()
-//                       .startsWith(userDtoInput.getFirstName().toLowerCase() + "." +
-//                               userDtoInput.getLastName().toLowerCase()));
-//    }
+        assertNotNull(result);
+        assertEquals(userDtoInput.getFirstName(), result.getFirstName());
+        assertEquals(userDtoInput.getLastName(), result.getLastName());
+        assertEquals(savedUser.getUsername(), result.getUsername());
+    }
 
-//    @Test
-//    void createEntireUser_shouldUseBaseUsernameIfUnique() {
-//        UserWithPassword user = userService.createEntireUser(userDtoInput);
-//
-//        assertNotNull(user);
-//        assertEquals(savedUser.getUsername(), user.getUsername());
-//    }
+    @Test
+    void createEntireUser_shouldGenerateUniqueUsername() {
+        UserWithPassword user = userService.createEntireUser(userDtoInput);
+
+        assertNotNull(user);
+        assertTrue(user.getUsername()
+                       .startsWith(userDtoInput.getFirstName().toLowerCase() + "." +
+                               userDtoInput.getLastName().toLowerCase()));
+    }
+
+    @Test
+    void createEntireUser_shouldUseBaseUsernameIfUnique() {
+        UserWithPassword user = userService.createEntireUser(userDtoInput);
+
+        assertNotNull(user);
+        assertEquals(savedUser.getUsername(), user.getUsername());
+    }
 
     @Test
     void isUsernameExistsInDatabase_shouldReturnTrueIfUsernameExists() {
@@ -101,67 +111,56 @@ class UserServiceTest {
         assertFalse(usernameExists);
     }
 
-//    @Test
-//    void switchActivate_WithIncorrectPassword_ShouldThrowAccessException() {
-//        String username = savedUser.getUsername();
-//        UserActivateDtoInput userActivateDtoInput = new UserActivateDtoInput(true);
-//
-//        when(userRepo.findByUsername(savedUser.getUsername())).thenReturn(Optional.of(savedUser));
-//
-//        AccessException exception =
-//                assertThrows(AccessException.class, () -> userService.switchActivate(username, userActivateDtoInput));
-//        assertEquals("You don't have access for this.", exception.getMessage());
-//    }
+    @Test
+    void changePassword_InvalidOldPassword_ThrowsAccessException() {
+        String username = savedUser.getUsername();
+        String password = savedUser.getPassword();
+        String invalidPassword = "Invalid password";
+        User userWithInvalidPassword = createTestUser(userDtoInput);
+        userWithInvalidPassword.setPassword(invalidPassword);
 
-//    @Test
-//    void switchActivate_InvalidPassword_ThrowsAccessException() {
-//        String username = savedUser.getUsername();
-//        UserActivateDtoInput userActivateDtoInput = new UserActivateDtoInput(true);
-//        String invalidPassword = "Invalid password";
-//
-//        when(userRepo.findByUsername(username)).thenReturn(Optional.of(savedUser));
-//
-//        AccessException exception =
-//                assertThrows(AccessException.class, () -> userService.switchActivate(username, userActivateDtoInput));
-//
-//        verify(userRepo).findByUsername(username);
-//        verify(userRepo, never()).save(any(User.class));
-//
-//        assertEquals("You don't have access for this.", exception.getMessage());
-//    }
+        when(userRepo.findByUsername(savedUser.getUsername())).thenReturn(Optional.of(savedUser));
 
-//    @Test
-//    void changePassword_ValidOldPassword_SuccessfullyChanged() {
-//        User updatedUser = createTestUser(userDtoInput);
-//        updatedUser.setPassword("New password");
-//
-//        when(userRepo.findByUsername(savedUser.getUsername())).thenReturn(Optional.of(savedUser));
-//        when(userRepo.save(savedUser)).thenReturn(updatedUser);
-//
-//        userService.changePassword(savedUser.getUsername(), savedUser.getPassword(), updatedUser.getPassword());
-//
-//        verify(userRepo).findByUsername(savedUser.getUsername());
-//        verify(userRepo).save(any(User.class));
-//    }
+        AccessException exception = assertThrows(AccessException.class,
+                () -> userService.changePassword(username, password, invalidPassword));
 
-//    @Test
-//    void changePassword_InvalidOldPassword_ThrowsAccessException() {
-//        String username = savedUser.getUsername();
-//        String password = savedUser.getPassword();
-//        String invalidPassword = "Invalid password";
-//        User userWithInvalidPassword = createTestUser(userDtoInput);
-//        userWithInvalidPassword.setPassword(invalidPassword);
-//
-//        when(userRepo.findByUsername(savedUser.getUsername())).thenReturn(Optional.of(savedUser));
-//
-//        AccessException exception = assertThrows(AccessException.class,
-//                () -> userService.changePassword(username, password, invalidPassword));
-//
-//        verify(userRepo).findByUsername(savedUser.getUsername());
-//        verify(userRepo, never()).save(any(User.class));
-//
-//        assertEquals("You don't have access for this.", exception.getMessage());
-//    }
+        verify(userRepo).findByUsername(savedUser.getUsername());
+        verify(userRepo, never()).save(any(User.class));
+
+        assertEquals("Old password is incorrect", exception.getMessage());
+    }
+
+    @Test
+    void changePassword_ValidOldPassword_PasswordUpdated() {
+        String username = "john.doe";
+        String oldPassword = "validOldPassword";
+        String newPassword = "newPassword";
+        User user = new User();
+        user.setPassword("encodedValidOldPassword");
+
+        when(userRepo.findByUsername(eq(username))).thenReturn(java.util.Optional.of(user));
+        when(passwordEncoder.matches(eq(oldPassword), any())).thenReturn(true);
+
+        userService.changePassword(username, oldPassword, newPassword);
+
+        verify(passwordEncoder).encode(eq(newPassword));
+        verify(userRepo).save(user);
+    }
+
+    @Test
+    void switchActivate_UserExists_UserActivationStatusUpdated() {
+        String username = "john.doe";
+        UserActivateDtoInput userInput = new UserActivateDtoInput();
+        userInput.setIsActive(true);
+        User user = new User();
+
+        Mockito.when(userRepo.findByUsername(username)).thenReturn(java.util.Optional.of(user));
+
+        userService.switchActivate(username, userInput);
+
+        verify(userRepo).save(user);
+        assertTrue(user.getIsActive());
+    }
 
     @Test
     void findUserByUsername_WithValidUserName_ShouldReturnUser() {
@@ -188,11 +187,6 @@ class UserServiceTest {
         assertEquals(expectedUser, result.get());
     }
 
-
-    private UserDtoInput createTestUserDtoInput() {
-        return UserDtoInput.builder().firstName("John").lastName("Doe").build();
-    }
-
     @Test
     void findUserByUsername_WithInvalidUsername_ShouldReturnEmpty() {
         String invalidUsername = "nonexistent.user";
@@ -204,29 +198,70 @@ class UserServiceTest {
         assertTrue(result.isEmpty());
     }
 
-//    @Test
-//    void createEntireUser_WhenUsernameDoesNotExist_ShouldReturnUserWithZeroPrefix() {
-//        when(userService.isUsernameExistsInDatabase(savedUser.getUsername())).thenReturn(false);
-//
-//        UserWithPassword resultUser = userService.createEntireUser(userDtoInput);
-//
-//        assertNotNull(resultUser);
-//        assertEquals(savedUser.getUsername(), resultUser.getUsername());
-//        assertEquals(0, resultUser.getPostfix());
-//    }
+    @Test
+    void createEntireUser_WhenUsernameDoesNotExist_ShouldReturnUserWithZeroPrefix() {
+        when(userService.isUsernameExistsInDatabase(savedUser.getUsername())).thenReturn(false);
 
-//    @Test
-//    void createEntireUser_WhenUsernameExistsWithPrefix_ShouldReturnUserWithIncrementedPrefix() {
-//        when(userService.isUsernameExistsInDatabase(savedUser.getUsername())).thenReturn(true);
-//        when(userRepo.findMaxPostfixByUsername(savedUser.getUsername())).thenReturn(2);
-//
-//        UserWithPassword resultUser = userService.createEntireUser(userDtoInput);
-//
-//        assertNotNull(resultUser);
-//        assertEquals(savedUser.getUsername(), resultUser.getUsername());
-//        assertEquals(3, resultUser.getPostfix());
-//    }
+        UserWithPassword resultUser = userService.createEntireUser(userDtoInput);
 
+        assertNotNull(resultUser);
+        assertEquals(savedUser.getUsername(), resultUser.getUsername());
+        assertEquals(0, resultUser.getPostfix());
+    }
+
+    @Test
+    void createEntireUser_WhenUsernameExistsWithPrefix_ShouldReturnUserWithIncrementedPrefix() {
+        when(userService.isUsernameExistsInDatabase(savedUser.getUsername())).thenReturn(true);
+        when(userRepo.findMaxPostfixByUsername(savedUser.getUsername())).thenReturn(2);
+
+        UserWithPassword resultUser = userService.createEntireUser(userDtoInput);
+
+        assertNotNull(resultUser);
+        assertEquals(savedUser.getUsername(), resultUser.getUsername());
+        assertEquals(3, resultUser.getPostfix());
+    }
+
+    @Test
+    void loadUserByUsername_UserExistsAndNotBlocked_UserDetailsReturned() {
+        String username = "john.doe";
+        User user = new User();
+        user.setUsername(username);
+        user.setPassword("encodedPassword");
+        user.setIsActive(true);
+
+        when(loginAttemptService.isBlocked()).thenReturn(false);
+        when(userRepo.findByUsernameAndPostfix(username, 0)).thenReturn(java.util.Optional.of(user));
+
+        UserDetails userDetails = userService.loadUserByUsername(username);
+
+        verify(loginAttemptService).isBlocked();
+        assertNotNull(userDetails);
+        assertEquals(username, userDetails.getUsername());
+        assertEquals("encodedPassword", userDetails.getPassword());
+        assertEquals(1, userDetails.getAuthorities().size());
+    }
+
+    @Test
+    void loadUserByUsername_UserDoesNotExist_ThrowsUsernameNotFoundException() {
+        String username = "john.doe";
+
+        Mockito.when(loginAttemptService.isBlocked()).thenReturn(false);
+
+        assertThrows(UsernameNotFoundException.class, () -> userService.loadUserByUsername(username));
+    }
+
+    @Test
+    void loadUserByUsername_UserBlocked_ThrowsTooManyAttemptsException() {
+        String username = "john.doe";
+
+        Mockito.when(loginAttemptService.isBlocked()).thenReturn(true);
+
+        assertThrows(TooManyAttemptsException.class, () -> userService.loadUserByUsername(username));
+    }
+
+    private UserDtoInput createTestUserDtoInput() {
+        return UserDtoInput.builder().firstName("John").lastName("Doe").build();
+    }
 
     private User createTestUser(UserDtoInput userDtoInput) {
         return User.builder()
