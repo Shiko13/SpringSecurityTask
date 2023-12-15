@@ -4,6 +4,7 @@ import com.epam.error.AccessException;
 import com.epam.error.ErrorMessageConstants;
 import com.epam.error.NotFoundException;
 import com.epam.mapper.TraineeMapper;
+import com.epam.mapper.UserMapper;
 import com.epam.model.Trainee;
 import com.epam.model.Trainer;
 import com.epam.model.User;
@@ -15,6 +16,7 @@ import com.epam.model.dto.TraineeUpdateDtoOutput;
 import com.epam.model.dto.TraineeUpdateListDtoOutput;
 import com.epam.model.dto.TrainerShortDtoInput;
 import com.epam.model.dto.UserDtoInput;
+import com.epam.model.dto.UserWithPassword;
 import com.epam.repo.TraineeRepo;
 import com.epam.repo.TrainerRepo;
 import io.micrometer.core.annotation.Counted;
@@ -36,9 +38,9 @@ public class TraineeServiceImpl implements TraineeService {
 
     private final TraineeMapper traineeMapper;
 
-    private final AuthenticationService authenticationService;
-
     private final UserService userService;
+
+    private final UserMapper userMapper;
 
     @Override
     @Transactional
@@ -46,23 +48,24 @@ public class TraineeServiceImpl implements TraineeService {
     public TraineeSaveDtoOutput save(TraineeDtoInput traineeDtoInput) {
         log.info("save, traineeDtoInput = {}", traineeDtoInput);
 
-        User user = userService.save(new UserDtoInput(traineeDtoInput.getFirstName(), traineeDtoInput.getLastName()));
+        UserWithPassword userWithPassword =
+                userService.save(new UserDtoInput(traineeDtoInput.getFirstName(), traineeDtoInput.getLastName()));
+        User user = userMapper.toEntity(userWithPassword);
 
         Trainee traineeToSave = traineeMapper.toEntity(traineeDtoInput);
         traineeToSave.setUser(user);
 
         Trainee trainee = traineeRepo.save(traineeToSave);
 
-        return traineeMapper.toSaveDto(trainee);
+        return traineeMapper.toSaveDto(trainee, userWithPassword.getRawPassword());
     }
 
     @Override
     @Transactional
-    public TraineeDtoOutput getByUsername(String username, String password) {
+    public TraineeDtoOutput getByUsername(String username) {
         log.info("getByUsername, username = {}", username);
 
         User user = getUserByUsername(username);
-        authenticate(password, user);
 
         Trainee trainee = traineeRepo.findByUserId(user.getId())
                                      .orElseThrow(() -> new NotFoundException(ErrorMessageConstants.NOT_FOUND_MESSAGE));
@@ -72,12 +75,10 @@ public class TraineeServiceImpl implements TraineeService {
 
     @Override
     @Transactional
-    public TraineeUpdateDtoOutput updateProfile(String username, String password,
-                                                TraineeProfileDtoInput traineeDtoInput) {
+    public TraineeUpdateDtoOutput updateProfile(String username, TraineeProfileDtoInput traineeDtoInput) {
         log.info("updateProfile, traineeDtoInput = {}", traineeDtoInput);
 
         User user = getUserByUsername(username);
-        authenticate(password, user);
 
         Trainee trainee = traineeRepo.findByUserId(user.getId())
                                      .orElseThrow(() -> new NotFoundException(ErrorMessageConstants.NOT_FOUND_MESSAGE));
@@ -90,16 +91,12 @@ public class TraineeServiceImpl implements TraineeService {
 
     @Override
     @Transactional
-    public TraineeUpdateListDtoOutput updateTrainerList(String username, String password, String traineeName,
-                                                        List<TrainerShortDtoInput> trainersUsernames) {
+    public TraineeUpdateListDtoOutput updateTrainerList(String username, List<TrainerShortDtoInput> trainersUsernames) {
         log.info("updateTrainerList, trainersUsernames = {}", trainersUsernames);
-
-        User user = getUserByUsername(username);
-        authenticate(password, user);
 
         List<Trainer> selectedTrainers = trainerRepo.findAllByUser_UsernameIn(
                 trainersUsernames.stream().map(TrainerShortDtoInput::getUsername).toList());
-        Trainee trainee = traineeRepo.findByUser_Username(traineeName)
+        Trainee trainee = traineeRepo.findByUser_Username(username)
                                      .orElseThrow(() -> new NotFoundException(ErrorMessageConstants.NOT_FOUND_MESSAGE));
         trainee.setTrainers(selectedTrainers);
 
@@ -110,11 +107,10 @@ public class TraineeServiceImpl implements TraineeService {
 
     @Override
     @Transactional
-    public void deleteByUsername(String username, String password) {
+    public void deleteByUsername(String username) {
         log.info("deleteByUsername, username = {}", username);
 
         User user = getUserByUsername(username);
-        authenticate(password, user);
 
         traineeRepo.deleteById(user.getId());
     }
@@ -122,11 +118,5 @@ public class TraineeServiceImpl implements TraineeService {
     private User getUserByUsername(String username) {
         return userService.findUserByUsername(username)
                           .orElseThrow(() -> new AccessException(ErrorMessageConstants.ACCESS_ERROR_MESSAGE));
-    }
-
-    public void authenticate(String password, User user) {
-        if (authenticationService.checkAccess(password, user)) {
-            throw new AccessException(ErrorMessageConstants.ACCESS_ERROR_MESSAGE);
-        }
     }
 }

@@ -15,12 +15,12 @@ public interface TraineeService {
 
     TraineeSaveDtoOutput save(TraineeDtoInput traineeDtoInput);
 
-    TraineeDtoOutput getByUsername(String username, String password);
+    TraineeDtoOutput getByUsername(String username);
 
-    TraineeUpdateDtoOutput updateProfile(String userName, String password, TraineeProfileDtoInput traineeDtoInput);
+    TraineeUpdateDtoOutput updateProfile(String userName, TraineeProfileDtoInput traineeDtoInput);
 
-    TraineeUpdateListDtoOutput updateTrainerList(String username, String password, String traineeName,
+    TraineeUpdateListDtoOutput updateTrainerList(String username,
                                                  List<TrainerShortDtoInput> trainersUsernames);
 
-    void deleteByUsername(String username, String password);
+    void deleteByUsername(String username);
 }

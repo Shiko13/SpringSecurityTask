@@ -31,7 +31,6 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -55,9 +54,6 @@ class TrainingServiceTest {
     @Mock
     private UserService userService;
 
-    @Mock
-    private AuthenticationService authenticationService;
-
     @Test
     void save_shouldReturnSavedTrainingDtoOutput() {
         User user = createUser();
@@ -69,14 +65,12 @@ class TrainingServiceTest {
 
         when(trainingRepo.save(any(Training.class))).thenReturn(savedTraining);
         when(trainingMapper.toEntity(any())).thenReturn(savedTraining);
-        when(userService.findUserByUsername(user.getUsername())).thenReturn(Optional.of(user));
-        when(authenticationService.checkAccess(user.getPassword(), user)).thenReturn(false);
         when(traineeRepo.findByUser_Username(trainingDtoInput.getTraineeUsername())).thenReturn(
                 Optional.ofNullable(trainee));
         when(trainerRepo.findByUser_Username(trainingDtoInput.getTrainerUsername())).thenReturn(
                 Optional.ofNullable(trainer));
 
-        Training result = trainingService.save(user.getUsername(), user.getPassword(), trainingDtoInput);
+        Training result = trainingService.save(trainingDtoInput);
 
         assertEquals(savedTraining.getId(), result.getId());
     }
@@ -84,21 +78,16 @@ class TrainingServiceTest {
     @Test
     void save_invalidTrainee_shouldThrowAccessError() {
         User user = createUser();
-        String username = user.getUsername();
-        String password = user.getPassword();
         Trainee trainee = createTrainee();
 
         TrainingDtoInput trainingDtoInput = createTrainingDtoInput();
         Training savedTraining = createTraining(trainingDtoInput);
 
         when(trainingMapper.toEntity(any())).thenReturn(savedTraining);
-        when(userService.findUserByUsername(user.getUsername())).thenReturn(Optional.of(user));
-        when(authenticationService.checkAccess(user.getPassword(), user)).thenReturn(false);
         when(traineeRepo.findByUser_Username(trainingDtoInput.getTraineeUsername())).thenReturn(
                 Optional.ofNullable(trainee));
 
-        AccessException exception = assertThrows(AccessException.class,
-                () -> trainingService.save(username, password, trainingDtoInput),
+        AccessException exception = assertThrows(AccessException.class, () -> trainingService.save(trainingDtoInput),
                 "An AccessException should be thrown when the trainer does not exist");
 
         assertEquals("You don't have access for this.", exception.getMessage());
@@ -107,18 +96,12 @@ class TrainingServiceTest {
     @Test
     void save_invalidTrainer_shouldThrowAccessError() {
         User user = createUser();
-        String username = user.getUsername();
-        String password = user.getPassword();
-
         TrainingDtoInput trainingDtoInput = createTrainingDtoInput();
         Training savedTraining = createTraining(trainingDtoInput);
 
         when(trainingMapper.toEntity(any())).thenReturn(savedTraining);
-        when(userService.findUserByUsername(user.getUsername())).thenReturn(Optional.of(user));
-        when(authenticationService.checkAccess(user.getPassword(), user)).thenReturn(false);
 
-        AccessException exception = assertThrows(AccessException.class,
-                () -> trainingService.save(username, password, trainingDtoInput),
+        AccessException exception = assertThrows(AccessException.class, () -> trainingService.save(trainingDtoInput),
                 "An AccessException should be thrown when the trainer does not exist");
 
         assertEquals("You don't have access for this.", exception.getMessage());
@@ -152,21 +135,6 @@ class TrainingServiceTest {
         List<TrainingForTrainerDtoOutput> result = trainingService.findByDateRangeAndTrainerUsername(specification);
 
         assertEquals(testTrainings.size(), result.size());
-    }
-
-    @Test
-    void authenticate_InvalidPassword_AccessExceptionThrown() {
-        User user = createUser();
-
-        when(authenticationService.checkAccess("Invalid password", user)).thenReturn(true);
-
-        AccessException exception =
-                assertThrows(AccessException.class, () -> trainingService.authenticate("Invalid password", user),
-                        "An AccessException should be thrown for invalid password");
-
-        verify(authenticationService).checkAccess("Invalid password", user);
-
-        assertEquals("You don't have access for this.", exception.getMessage());
     }
 
     public TrainingDtoInput createTrainingDtoInput() {

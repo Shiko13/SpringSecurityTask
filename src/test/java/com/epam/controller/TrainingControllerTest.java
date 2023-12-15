@@ -87,27 +87,23 @@ class TrainingControllerTest {
 
     @Test
     void save_ShouldOk() {
-        String username = "maria.dallas";
-        String password = "password";
         TrainingDtoInput trainingDtoInput = createTestTrainingDtoInput();
 
-        trainingController.save(username, password, trainingDtoInput);
+        trainingController.save(trainingDtoInput);
 
-        verify(trainingService).save(username, password, trainingDtoInput);
+        verify(trainingService).save(trainingDtoInput);
     }
 
     @Test
     void save_ShouldThrowAccessException() {
-        String username = "maria.dallas";
-        String password = "password";
         TrainingDtoInput trainingDtoInput = createTestTrainingDtoInput();
 
         Mockito.doThrow(new AccessException("You don't have access for this."))
                .when(trainingService)
-               .save(username, password, trainingDtoInput);
+               .save(trainingDtoInput);
 
-        AccessException exception = assertThrows(AccessException.class,
-                () -> trainingController.save(username, password, trainingDtoInput));
+        AccessException exception =
+                assertThrows(AccessException.class, () -> trainingController.save(trainingDtoInput));
 
         assertEquals("You don't have access for this.", exception.getMessage());
     }

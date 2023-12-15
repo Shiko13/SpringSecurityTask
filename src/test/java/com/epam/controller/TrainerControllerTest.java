@@ -36,9 +36,9 @@ class TrainerControllerTest {
     @Test
     void getByUserName_ShouldReturnTrainerDtoOutput() {
         TrainerDtoOutput expected = createExpectedTrainerDtoOutput();
-        when(trainerService.getByUsername("testUser", "testPassword")).thenReturn(expected);
+        when(trainerService.getByUsername("testUser")).thenReturn(expected);
 
-        TrainerDtoOutput result = trainerController.getProfile("testUser", "testPassword");
+        TrainerDtoOutput result = trainerController.getProfile("testUser");
 
         assertNotNull(result);
         assertEquals(expected.getFirstName(), result.getFirstName());
@@ -48,14 +48,10 @@ class TrainerControllerTest {
 
     @Test
     void getTrainersWithEmptyTrainees_ShouldReturnListOfTrainerDtoOutput() {
-        String username = "john.doe";
-        String password = "password";
-
         List<TrainerForTraineeDtoOutput> expectedList = toTrainerForTraineeDtoOutputList();
-        when(trainerService.getTrainersWithEmptyTrainees(username, password)).thenReturn(expectedList);
+        when(trainerService.getTrainersWithEmptyTrainees()).thenReturn(expectedList);
 
-        List<TrainerForTraineeDtoOutput> resultList =
-                trainerController.getTrainersWithEmptyTrainees(username, password);
+        List<TrainerForTraineeDtoOutput> resultList = trainerController.getTrainersWithEmptyTrainees();
 
         assertNotNull(resultList);
         assertFalse(resultList.isEmpty());
@@ -84,9 +80,9 @@ class TrainerControllerTest {
         TrainerProfileDtoInput trainerDtoInput = createTrainerProfileDtoInput();
         TrainerUpdateDtoOutput expected = createExpectedTrainerUpdateDtoOutput();
 
-        when(trainerService.updateProfile("testUser", "testPassword", trainerDtoInput)).thenReturn(expected);
+        when(trainerService.updateProfile("testUser", trainerDtoInput)).thenReturn(expected);
 
-        TrainerUpdateDtoOutput result = trainerController.updateProfile("testUser", "testPassword", trainerDtoInput);
+        TrainerUpdateDtoOutput result = trainerController.updateProfile("testUser", trainerDtoInput);
 
         assertNotNull(result);
         assertEquals(expected.getUsername(), result.getUsername());

@@ -38,9 +38,8 @@ public class TraineeController {
     @GetMapping("/username")
     @ApiOperation("Get trainee profile by username")
     public TraineeDtoOutput getProfile(
-            @RequestParam @Pattern(regexp = "[a-z]+\\.[\\w-]+", message = "Invalid input format") String username,
-            @RequestParam String password) {
-        return traineeService.getByUsername(username, password);
+            @RequestParam @Pattern(regexp = "[a-z]+\\.[\\w-]+", message = "Invalid input format") String username) {
+        return traineeService.getByUsername(username);
     }
 
     @PostMapping()
@@ -51,22 +50,22 @@ public class TraineeController {
 
     @PutMapping("/profile")
     @ApiOperation("Update trainee profile")
-    public TraineeUpdateDtoOutput updateProfile(@RequestParam String username, @RequestParam String password,
+    public TraineeUpdateDtoOutput updateProfile(@RequestParam String username,
                                                 @RequestBody TraineeProfileDtoInput traineeDtoInput) {
-        return traineeService.updateProfile(username, password, traineeDtoInput);
+        return traineeService.updateProfile(username, traineeDtoInput);
     }
 
     @PutMapping("/trainer-list")
     @ApiOperation("Update trainee's trainer list")
-    public TraineeUpdateListDtoOutput updateTrainerList(@RequestParam String username, @RequestParam String password, @RequestParam String traineeName,
+    public TraineeUpdateListDtoOutput updateTrainerList(@RequestParam String username,
                                                         @RequestBody List<TrainerShortDtoInput> trainersUsernames) {
-        return traineeService.updateTrainerList(username, password, traineeName, trainersUsernames);
+        return traineeService.updateTrainerList(username, trainersUsernames);
     }
 
     @DeleteMapping()
     @ResponseStatus(HttpStatus.OK)
     @ApiOperation("Delete trainee by username")
-    public void deleteByUsername(@RequestParam String username, @RequestParam String password) {
-        traineeService.deleteByUsername(username, password);
+    public void deleteByUsername(@RequestParam String username) {
+        traineeService.deleteByUsername(username);
     }
 }

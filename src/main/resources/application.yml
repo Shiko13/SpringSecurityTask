@@ -6,6 +6,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
+    open-in-view: false
   main:
     allow-circular-references: true
   mvc:
@@ -19,6 +20,7 @@ spring:
 
 password:
   length: 10
+  strength: 12
 
 server:
   hostname: "localhost"
@@ -42,6 +44,12 @@ management:
     distribution:
       percentiles-histogram:
         "[http.server.requests]": true
+
+security:
+  jwt:
+    signing-key: "0dbe9fb91dcd"
+    access-token:
+      expires-in-s: 172800 #60*60*48
 
 #logging:
 #  level:

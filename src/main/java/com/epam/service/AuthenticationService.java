@@ -1,8 +1,12 @@
 package com.epam.service;
 
-import com.epam.model.User;
+import com.epam.model.dto.AuthResponse;
+
+import javax.servlet.http.HttpServletRequest;
 
 public interface AuthenticationService {
 
-    boolean checkAccess(String password, User user);
+    AuthResponse login(String username, String password);
+
+    void logout(HttpServletRequest request);
 }

@@ -13,7 +13,7 @@ import java.util.UUID;
 @Component
 public class TransactionLoggingAspect {
 
-    @Around("execution(* com.epam.*.*.*(..))")
+    @Around("execution(* com.epam.*.*.*(..)) && !execution(* com.epam.filter.*.*(..))")
     public Object logTransaction(ProceedingJoinPoint joinPoint) throws Throwable {
         String transactionId = generateTransactionId();
         String methodName = joinPoint.getSignature().toShortString();

@@ -41,12 +41,11 @@ class TraineeControllerTest {
     @Test
     void getByUsername_ShouldReturnTraineeDtoOutput() {
         String username = "testUser";
-        String password = "testPassword";
         TraineeDtoOutput expectedOutput = createExpectedTraineeDtoOutput();
 
-        when(traineeService.getByUsername(username, password)).thenReturn(expectedOutput);
+        when(traineeService.getByUsername(username)).thenReturn(expectedOutput);
 
-        TraineeDtoOutput result = traineeController.getProfile(username, password);
+        TraineeDtoOutput result = traineeController.getProfile(username);
 
         assertNotNull(result);
         assertEquals(expectedOutput, result);
@@ -70,13 +69,12 @@ class TraineeControllerTest {
     @Test
     void updateProfile_ShouldReturnTraineeDtoOutput() {
         String username = "testUser";
-        String password = "testPassword";
         TraineeProfileDtoInput traineeDtoInput = createTraineeProfileDtoInput();
         TraineeUpdateDtoOutput expectedOutput = createTraineeUpdateDtoOutput();
 
-        when(traineeService.updateProfile(username, password, traineeDtoInput)).thenReturn(expectedOutput);
+        when(traineeService.updateProfile(username, traineeDtoInput)).thenReturn(expectedOutput);
 
-        TraineeUpdateDtoOutput result = traineeController.updateProfile(username, password, traineeDtoInput);
+        TraineeUpdateDtoOutput result = traineeController.updateProfile(username, traineeDtoInput);
 
         assertNotNull(result);
         assertEquals(expectedOutput, result);
@@ -85,13 +83,12 @@ class TraineeControllerTest {
     @Test
     void updateTrainerList_ShouldReturnTraineeDtoOutput() {
         String username = "testUser";
-        String password = "testPassword";
         List<TrainerShortDtoInput> trainersUsernames = createTrainersUsernamesList();
         TraineeUpdateListDtoOutput expectedOutput = createTraineeUpdateListDtoOutput();
 
-        when(traineeService.updateTrainerList(username, password, username, trainersUsernames)).thenReturn(expectedOutput);
+        when(traineeService.updateTrainerList(username, trainersUsernames)).thenReturn(expectedOutput);
 
-        TraineeUpdateListDtoOutput result = traineeController.updateTrainerList(username, password, username, trainersUsernames);
+        TraineeUpdateListDtoOutput result = traineeController.updateTrainerList(username, trainersUsernames);
 
         assertNotNull(result);
         assertEquals(expectedOutput, result);
@@ -100,26 +97,24 @@ class TraineeControllerTest {
     @Test
     void deleteByUsername_ShouldReturnNoContentResponse() {
         String username = "testUser";
-        String password = "testPassword";
 
-        doNothing().when(traineeService).deleteByUsername(username, password);
+        doNothing().when(traineeService).deleteByUsername(username);
 
-        traineeController.deleteByUsername(username, password);
+        traineeController.deleteByUsername(username);
 
-        verify(traineeService).deleteByUsername(username, password);
+        verify(traineeService).deleteByUsername(username);
     }
 
     @Test
     void deleteByUsername_ShouldThrowAccessException() {
         String username = "testUser";
-        String password = "testPassword";
 
         Mockito.doThrow(new AccessException("You don't have access for this."))
                .when(traineeService)
-               .deleteByUsername(username, password);
+               .deleteByUsername(username);
 
         AccessException exception =
-                assertThrows(AccessException.class, () -> traineeController.deleteByUsername(username, password));
+                assertThrows(AccessException.class, () -> traineeController.deleteByUsername(username));
 
         assertEquals("You don't have access for this.", exception.getMessage());
     }

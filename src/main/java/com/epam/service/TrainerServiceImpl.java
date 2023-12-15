@@ -4,6 +4,7 @@ import com.epam.error.AccessException;
 import com.epam.error.ErrorMessageConstants;
 import com.epam.error.NotFoundException;
 import com.epam.mapper.TrainerMapper;
+import com.epam.mapper.UserMapper;
 import com.epam.model.Trainer;
 import com.epam.model.TrainingType;
 import com.epam.model.User;
@@ -14,6 +15,7 @@ import com.epam.model.dto.TrainerProfileDtoInput;
 import com.epam.model.dto.TrainerSaveDtoOutput;
 import com.epam.model.dto.TrainerUpdateDtoOutput;
 import com.epam.model.dto.UserDtoInput;
+import com.epam.model.dto.UserWithPassword;
 import com.epam.repo.TrainerRepo;
 import com.epam.repo.TrainingTypeRepo;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -30,27 +32,21 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class TrainerServiceImpl implements TrainerService {
 
     private final TrainerRepo trainerRepo;
-
     private final TrainerMapper trainerMapper;
-
     private final TrainingTypeRepo trainingTypeRepo;
-
-    private final AuthenticationService authenticationService;
-
     private final UserService userService;
-
     private AtomicInteger freeActiveTrainers;
+    private UserMapper userMapper;
 
     public TrainerServiceImpl(TrainerRepo trainerRepo, TrainerMapper trainerMapper, TrainingTypeRepo trainingTypeRepo,
-                              AuthenticationService authenticationService, UserService userService,
-                              MeterRegistry meterRegistry) {
+                              UserService userService, MeterRegistry meterRegistry, UserMapper userMapper) {
         this.trainerRepo = trainerRepo;
         this.trainerMapper = trainerMapper;
         this.trainingTypeRepo = trainingTypeRepo;
-        this.authenticationService = authenticationService;
         this.userService = userService;
         freeActiveTrainers = new AtomicInteger();
         this.freeActiveTrainers = meterRegistry.gauge("free-active-trainers", freeActiveTrainers);
+        this.userMapper = userMapper;
     }
 
 
@@ -59,8 +55,9 @@ public class TrainerServiceImpl implements TrainerService {
     public TrainerSaveDtoOutput save(TrainerDtoInput trainerDtoInput) {
         log.info("save, trainerDtoInput = {}", trainerDtoInput);
 
-        User user = userService.save(new UserDtoInput(trainerDtoInput.getFirstName(), trainerDtoInput.getLastName()));
-
+        UserWithPassword userWithPassword =
+                userService.save(new UserDtoInput(trainerDtoInput.getFirstName(), trainerDtoInput.getLastName()));
+        User user = userMapper.toEntity(userWithPassword);
         TrainingType trainingType = trainingTypeRepo.findById(trainerDtoInput.getSpecialization())
                                                     .orElseThrow(() -> new AccessException(
                                                             ErrorMessageConstants.ACCESS_ERROR_MESSAGE));
@@ -71,15 +68,15 @@ public class TrainerServiceImpl implements TrainerService {
 
         Trainer trainer = trainerRepo.save(trainerToSave);
 
-        return trainerMapper.toSaveDto(trainer);
+        return trainerMapper.toSaveDto(trainer, userWithPassword.getRawPassword());
     }
 
     @Override
-    public TrainerDtoOutput getByUsername(String username, String password) {
+    @Transactional
+    public TrainerDtoOutput getByUsername(String username) {
         log.info("getByUserName, username = {}", username);
 
         User user = getUserByUsername(username);
-        authenticate(password, user);
 
         Trainer trainer = trainerRepo.findByUserId(user.getId())
                                      .orElseThrow(() -> new NotFoundException(ErrorMessageConstants.NOT_FOUND_MESSAGE));
@@ -89,12 +86,10 @@ public class TrainerServiceImpl implements TrainerService {
 
     @Override
     @Transactional
-    public TrainerUpdateDtoOutput updateProfile(String username, String password,
-                                                TrainerProfileDtoInput trainerDtoInput) {
+    public TrainerUpdateDtoOutput updateProfile(String username, TrainerProfileDtoInput trainerDtoInput) {
         log.info("updateProfile, username = {}", username);
 
         User user = getUserByUsername(username);
-        authenticate(password, user);
 
         Trainer trainer = trainerRepo.findByUserId(user.getId())
                                      .orElseThrow(() -> new NotFoundException(ErrorMessageConstants.NOT_FOUND_MESSAGE));
@@ -113,11 +108,8 @@ public class TrainerServiceImpl implements TrainerService {
     }
 
     @Override
-    public List<TrainerForTraineeDtoOutput> getTrainersWithEmptyTrainees(String username, String password) {
+    public List<TrainerForTraineeDtoOutput> getTrainersWithEmptyTrainees() {
         log.info("getTrainersWithEmptyTrainees");
-
-        User user = getUserByUsername(username);
-        authenticate(password, user);
 
         List<Trainer> trainers = trainerRepo.findByTraineesIsEmptyAndUserIsActiveTrue();
 
@@ -135,11 +127,5 @@ public class TrainerServiceImpl implements TrainerService {
     private User getUserByUsername(String username) {
         return userService.findUserByUsername(username)
                           .orElseThrow(() -> new NotFoundException(ErrorMessageConstants.NOT_FOUND_MESSAGE));
-    }
-
-    public void authenticate(String password, User user) {
-        if (authenticationService.checkAccess(password, user)) {
-            throw new AccessException(ErrorMessageConstants.ACCESS_ERROR_MESSAGE);
-        }
     }
 }
